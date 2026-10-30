@@ -1,6 +1,0 @@
-{
-  "name": "Code Flow Visualizer",
-  "description": "Visualize your code execution step-by-step with AI",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
