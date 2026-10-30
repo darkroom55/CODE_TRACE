@@ -20,6 +20,7 @@ import {
   RotateCcw,
   CornerDownLeft,
   Trash2,
+  Terminal,
 } from 'lucide-react';
 
 interface UnifiedWorkbenchProps {
@@ -58,7 +59,7 @@ export function UnifiedWorkbench({
   const [playbackSpeed, setPlaybackSpeed] = React.useState<number>(1000); // 1s
   const [leftViewMode, setLeftViewMode] = React.useState<'editor' | 'trace' | 'diff'>('editor');
   const [diffTarget, setDiffTarget] = React.useState<'code_only' | 'with_patch'>('code_only');
-  const [activeRightTab, setActiveRightTab] = React.useState<'table' | 'watched' | 'stack'>('table');
+  const [activeRightTab, setActiveRightTab] = React.useState<'table' | 'watched' | 'output' | 'stack'>('table');
   const [watchedVarNames, setWatchedVarNames] = React.useState<string[]>([]);
 
   // When a new result arrives, reset step index and open trace view
@@ -102,6 +103,21 @@ export function UnifiedWorkbench({
 
   const activeTrace = result?.trace || [];
   const currentStep = activeTrace[currentStepIndex];
+
+  // Cumulative standard output emitted up to current step
+  const cumulativeStdout = React.useMemo(() => {
+    if (!result) return '';
+    const emitted: string[] = [];
+    for (let i = 0; i <= currentStepIndex; i++) {
+      const s = activeTrace[i];
+      if (s?.stdout && s.stdout.trim()) {
+        emitted.push(s.stdout.trim());
+      }
+    }
+    if (emitted.length > 0) return emitted.join('\n');
+    if (result.output && result.output.trim()) return result.output.trim();
+    return '';
+  }, [result, activeTrace, currentStepIndex]);
 
   // Discover all unique variables across all steps in the trace
   const allDiscoveredVariables = React.useMemo(() => {
@@ -521,35 +537,50 @@ export function UnifiedWorkbench({
           </div>
         </div>
 
-        {/* TAB NAVIGATION: All Variables | Watched Variables Panel | Heap & Stack */}
-        <div className="flex border-b border-[#141414] bg-[#F5F5F3]">
+        {/* TAB NAVIGATION: All Variables | Console Output | Debugging Insights | Heap & Stack */}
+        <div className="flex border-b border-[#141414] bg-[#F5F5F3] overflow-x-auto select-none">
           <button
             onClick={() => setActiveRightTab('table')}
-            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors border-r border-[#141414] flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors border-r border-[#141414] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeRightTab === 'table'
                 ? 'bg-white text-[#141414] shadow-[inset_0_2px_0_#3B82F6]'
                 : 'text-gray-600 hover:bg-[#ECEBE8]'
             }`}
           >
             <ListFilter className="w-3.5 h-3.5 text-[#3B82F6]" />
-            <span>All Variables ({currentStep ? currentStep.variables.length : 0})</span>
+            <span>Variables ({currentStep ? currentStep.variables.length : 0})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveRightTab('output')}
+            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors border-r border-[#141414] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeRightTab === 'output'
+                ? 'bg-white text-[#141414] shadow-[inset_0_2px_0_#10B981]'
+                : 'text-gray-600 hover:bg-[#ECEBE8]'
+            }`}
+          >
+            <Terminal className="w-3.5 h-3.5 text-[#10B981]" />
+            <span>Output & Console</span>
+            {cumulativeStdout && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveRightTab('watched')}
-            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors border-r border-[#141414] flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors border-r border-[#141414] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeRightTab === 'watched'
-                ? 'bg-white text-[#141414] shadow-[inset_0_2px_0_#3B82F6]'
+                ? 'bg-white text-[#141414] shadow-[inset_0_2px_0_#7C3AED]'
                 : 'text-gray-600 hover:bg-[#ECEBE8]'
             }`}
           >
-            <Pin className="w-3.5 h-3.5 text-[#3B82F6]" />
-            <span>Watched Panel ({watchedVarNames.length})</span>
+            <Sparkles className="w-3.5 h-3.5 text-[#7C3AED]" />
+            <span>Insights ({watchedVarNames.length})</span>
           </button>
 
           <button
             onClick={() => setActiveRightTab('stack')}
-            className={`py-2 px-4 text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 px-4 text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeRightTab === 'stack'
                 ? 'bg-white text-[#141414] shadow-[inset_0_2px_0_#3B82F6]'
                 : 'text-gray-600 hover:bg-[#ECEBE8]'
@@ -786,6 +817,54 @@ export function UnifiedWorkbench({
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: REAL-TIME CONSOLE OUTPUT TERMINAL */}
+        {activeRightTab === 'output' && (
+          <div className="flex-1 flex flex-col bg-[#141414] text-[#F3F4F6] font-mono text-xs overflow-hidden min-h-[300px]">
+            {/* Terminal Header */}
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#1E1E1E] border-b border-[#333333] text-[10px]">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></div>
+                </div>
+                <span className="text-[#9CA3AF] ml-2 text-[10px]">terminal — {language.toLowerCase()} stdout</span>
+              </div>
+              <span className="text-[#6B7280] text-[9px]">
+                {currentStep?.stdout ? '⚡ Live Output Emitted' : 'Streaming...'}
+              </span>
+            </div>
+
+            {/* Terminal Body */}
+            <div className="flex-1 p-3 overflow-y-auto font-mono text-xs select-text">
+              {!result ? (
+                <div className="text-[#6B7280] italic">
+                  $ [Terminal Standing By] Run execution to stream live print() and console.log() output...
+                </div>
+              ) : cumulativeStdout ? (
+                <div className="flex flex-col gap-1">
+                  <div className="text-[#10B981] font-bold text-[11px] mb-1">
+                    $ execution output:
+                  </div>
+                  <pre className="whitespace-pre-wrap font-mono text-[#E5E7EB] bg-[#0A0A0A] p-2.5 rounded border border-[#262626]">
+                    {cumulativeStdout}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-[#6B7280] italic">
+                  $ Program ran step 1 to {currentStepIndex + 1} with no direct console output emitted yet.
+                </div>
+              )}
+            </div>
+
+            {/* Terminal Footer */}
+            <div className="px-3 py-1 bg-[#1E1E1E] border-t border-[#333333] flex items-center justify-between text-[9px] text-[#9CA3AF]">
+              <span>Exit Code: 0 (Normal)</span>
+              <span>Step: {currentStepIndex + 1}/{totalSteps}</span>
             </div>
           </div>
         )}

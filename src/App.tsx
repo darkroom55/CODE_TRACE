@@ -3,7 +3,7 @@ import { VisualizationResult, SubmissionHistoryItem } from './types';
 import { UnifiedWorkbench } from './components/UnifiedWorkbench';
 import { HistoryGrid } from './components/HistoryGrid';
 import { CODE_SAMPLES } from './data/samples';
-import { Loader2, Play, RotateCcw } from 'lucide-react';
+import { Loader2, Play, RotateCcw, Code2, ChevronDown } from 'lucide-react';
 
 const LANGUAGES = ['Python', 'Java', 'JavaScript', 'TypeScript', 'C++', 'Go', 'Rust'];
 
@@ -184,21 +184,25 @@ export default function App() {
           {/* Language Selector Bar & Run Button */}
           <div className="flex flex-wrap items-center gap-3">
             
-            {/* Language Quick Tabs */}
-            <div className="flex border border-[#141414] rounded-xs overflow-hidden bg-white">
-              {LANGUAGES.map((lang, idx) => (
-                <button
-                  key={lang}
-                  onClick={() => handleLanguageChange(lang)}
-                  className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                    selectedLanguage.toLowerCase() === lang.toLowerCase()
-                      ? 'bg-[#141414] text-white'
-                      : 'bg-white hover:bg-[#F0F0F0] text-[#141414]'
-                  } ${idx > 0 ? 'border-l border-[#141414]' : ''}`}
+            {/* Language Selector Dropdown */}
+            <div className="relative flex items-center">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-[#141414] shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] text-xs font-bold text-[#141414]">
+                <Code2 className="w-3.5 h-3.5 text-[#3B82F6]" />
+                <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider hidden sm:inline">Language:</span>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="bg-transparent font-bold text-xs uppercase cursor-pointer focus:outline-none pr-1 tracking-wider"
+                  title="Select Programming Language"
                 >
-                  {lang}
-                </button>
-              ))}
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang} className="text-[#141414] bg-white">
+                      {lang}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-gray-500 pointer-events-none" />
+              </div>
             </div>
 
             {/* Reset / Clear Button */}

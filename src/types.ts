@@ -9,11 +9,13 @@ export interface TraceStep {
   lineNumber: number;
   explanation: string;
   variables: Variable[];
+  stdout?: string;
 }
 
 export interface VisualizationResult {
   completedCode: string;
   trace: TraceStep[];
+  output?: string;
 }
 
 export interface VariableInsight {
